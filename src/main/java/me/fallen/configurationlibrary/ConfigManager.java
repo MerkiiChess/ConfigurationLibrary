@@ -56,16 +56,20 @@ public class ConfigManager {
 
         public ConfigInvocationHandler(Class<?> configClass, ConfigurationSection configSection, File configFile) {
             this.configClass = configClass;
-            this.yamlConfig = (configSection instanceof YamlConfiguration)
-                    ? (YamlConfiguration) configSection
-                    : null;
-            this.configSection = configSection;
-            this.configFile = configFile;
-
-            // Добавим проверку на null
-            if (this.configSection == null) {
-                throw new IllegalArgumentException("ConfigurationSection cannot be null for class " + configClass.getName());
+            if (!configFile.exists()) {
+                try {
+                    configFile.createNewFile();
+                } catch (IOException e) {
+                    throw new RuntimeException("Could not create config file: " + configFile.getAbsolutePath(), e);
+                }
             }
+            yamlConfig = YamlConfiguration.loadConfiguration(configFile);
+            if (configSection == null) {
+                this.configSection = yamlConfig.createSection(configClass.getSimpleName());
+            } else {
+                this.configSection = configSection;
+            }
+            this.configFile = configFile;
         }
 
         @Override

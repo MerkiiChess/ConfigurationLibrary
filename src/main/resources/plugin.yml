@@ -1,0 +1,4 @@
+name: ConfigurationLibrary
+version: '${project.version}'
+main: me.fallen.configurationlibrary.ConfigurationLibrary
+api-version: '1.16'

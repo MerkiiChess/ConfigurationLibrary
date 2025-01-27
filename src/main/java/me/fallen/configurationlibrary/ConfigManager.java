@@ -165,10 +165,28 @@ public class ConfigManager {
 
         private Object getDefaultValue(Method method) {
             Class<?> returnType = method.getReturnType();
+
+            // Стандартные типы
             if (returnType == String.class) return "";
             if (returnType == int.class) return 0;
             if (returnType == List.class) return new ArrayList<>();
             if (returnType == Map.class) return new HashMap<>();
+
+            // Если тип является классом, аннотированным @Config (например, SettingsConfig или ItemConfig)
+            if (returnType.isInterface() && returnType.isAnnotationPresent(Config.class)) {
+                try {
+                    // Создаем новый экземпляр интерфейса с помощью прокси
+                    return Proxy.newProxyInstance(
+                            returnType.getClassLoader(),
+                            new Class<?>[]{returnType},
+                            new ConfigInvocationHandler(returnType, configSection.getConfigurationSection(method.getName().toLowerCase()), configFile)
+                    );
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to instantiate config interface", e);
+                }
+            }
+
+            // Если тип не поддерживается
             throw new IllegalArgumentException("Unsupported return type: " + returnType.getName());
         }
 

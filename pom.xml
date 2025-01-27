@@ -6,7 +6,7 @@
 
   <groupId>me.fallen</groupId>
   <artifactId>ConfigurationLibrary</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.0-BETA</version>
   <packaging>jar</packaging>
 
   <name>ConfigurationLibrary</name>

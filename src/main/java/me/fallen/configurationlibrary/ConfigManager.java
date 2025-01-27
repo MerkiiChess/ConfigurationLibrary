@@ -52,15 +52,20 @@ public class ConfigManager {
         private final YamlConfiguration yamlConfig;
         private final File configFile;
         private final ConfigurationSection configSection;
-        private boolean changesMade = false;  // Эта переменная должна быть внутри экземпляра обработчика
+        private boolean changesMade = false;
 
         public ConfigInvocationHandler(Class<?> configClass, ConfigurationSection configSection, File configFile) {
             this.configClass = configClass;
             this.yamlConfig = (configSection instanceof YamlConfiguration)
                     ? (YamlConfiguration) configSection
-                    : null; // Это нужно для root-конфигов
+                    : null;
             this.configSection = configSection;
             this.configFile = configFile;
+
+            // Добавим проверку на null
+            if (this.configSection == null) {
+                throw new IllegalArgumentException("ConfigurationSection cannot be null for class " + configClass.getName());
+            }
         }
 
         @Override
@@ -94,14 +99,17 @@ public class ConfigManager {
         private Object handleNodeMethod(Method method, String key) throws Exception {
             Class<?> returnType = method.getReturnType();
             if (Map.class.isAssignableFrom(returnType)) {
-                return handleMap(key, method);  // Передаем метод в handleMap
+                return handleMap(key, method);
             } else if (List.class.isAssignableFrom(returnType)) {
-                return handleList(key, method);  // Передаем метод в handleList
+                return handleList(key, method);
             }
 
-            ConfigurationSection section = configSection.getConfigurationSection(key) != null
-                    ? configSection.getConfigurationSection(key)
-                    : configSection.createSection(key);
+            // Добавим проверку для configSection на null
+            ConfigurationSection section = configSection.getConfigurationSection(key);
+            if (section == null) {
+                section = configSection.createSection(key);  // Если секция не существует, создаем новую
+            }
+
             return Proxy.newProxyInstance(
                     returnType.getClassLoader(),
                     new Class<?>[]{returnType},
@@ -192,18 +200,15 @@ public class ConfigManager {
         private void saveConfig() {
             if (changesMade) {
                 try {
-                    // Преобразуем данные в сериализуемый вид (например, Map или List)
                     Map<String, Object> serializableData = new HashMap<>();
                     for (String key : configSection.getKeys(false)) {
                         Object value = configSection.get(key);
                         if (value instanceof Proxy) {
-                            // Если это прокси-объект, извлекаем данные
                             value = extractProxyData(value);
                         }
                         serializableData.put(key, value);
                     }
 
-                    // Сохраняем данные в конфигурацию
                     yamlConfig.set(configSection.getCurrentPath(), serializableData);
                     yamlConfig.save(configFile);
                     changesMade = false;
@@ -216,7 +221,6 @@ public class ConfigManager {
         }
 
         private Object extractProxyData(Object proxy) throws Exception {
-            // Извлекаем данные из прокси-объекта
             Class<?> proxyClass = proxy.getClass();
             Method[] methods = proxyClass.getDeclaredMethods();
             Map<String, Object> data = new HashMap<>();
